@@ -1,5 +1,11 @@
-// Entry point for the application
-console.log('Hello from index.ts!');
+import { colorize } from 'utils/colors.js';
+import { WSServer } from 'ws/WSServer.js';
 
-// Export default empty object to make this a module
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+
+const server = new WSServer();
+server.start(PORT, () => {
+  console.log(colorize(`WebSocket server tarted on ws://localhost:${PORT}`, 'green'));
+});
+
 export default {};
