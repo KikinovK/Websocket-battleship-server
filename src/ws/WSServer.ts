@@ -3,12 +3,14 @@ import { WebSocketServer } from 'ws';
 import { ConnectionManager } from './ConnectionManager.js';
 import { Router } from './Router.js';
 import { MessageHandler } from './MessageHandler.js';
+import { Database } from '../db/Database.js';
 
 import { colorize } from 'utils/colors.js';
 
 export class WSServer {
+  private db = new Database();
   private manager = new ConnectionManager();
-  private router = new Router(this.manager);
+  private router = new Router(this.manager, this.db);
   private handler = new MessageHandler(this.router);
   private wss?: WebSocketServer;
 
@@ -28,6 +30,11 @@ export class WSServer {
 
       ws.on('close', () => {
         this.manager.removeClient(client.id);
+
+        const namePlayer = client.playerId ? this.db.getPlayer(client.playerId)?.name : null;
+        if (namePlayer) {
+          console.log(colorize('Player disconnected: ', 'cyan'), colorize(namePlayer, 'yellow'));
+        }
         console.log(colorize('Client disconnected ', 'green'), colorize(client.id, 'yellow'));
       });
     });
