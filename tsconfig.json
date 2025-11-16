@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "baseUrl": "src",
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noUncheckedIndexedAccess": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "outDir": "dist",
+    "removeComments": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2022"
+  },
+  "include": ["src"]
+}
