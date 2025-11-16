@@ -10,6 +10,7 @@ import {
   RegServerEvent,
   ServerEvent,
   UpdateRoomEvent,
+  CreateGameEvent,
 } from '../types/ws-events.js';
 import { ConnectionManager } from './ConnectionManager.js';
 import { WSClient } from '../types/WSClient.js';
@@ -65,6 +66,18 @@ export class Router {
       id: 0,
     };
     this.sendResponse(client, joinResponse);
+  }
+
+  private sendCreateGame(client: WSClient, gameId: string, playerId: string) {
+    const response: CreateGameEvent = {
+      type: 'create_game',
+      data: {
+        idGame: gameId,
+        idPlayer: playerId,
+      },
+      id: 0,
+    };
+    this.sendResponse(client, response);
   }
 
   handle(client: WSClient, event: ClientEvent) {
@@ -137,6 +150,20 @@ export class Router {
       )
     );
     this.sendRoomUpdate(client);
+
+    if (room.playerIds.length === 2) {
+      const gameId = randomUUID();
+      room.gameId = gameId;
+      room.playerIds.forEach((playerId) => {
+        const playerClient = this.connections.getClientByPlayerId(playerId);
+        if (playerClient) {
+          this.sendCreateGame(playerClient, gameId, playerId);
+        }
+      });
+      console.log(
+        colorize(`Game ${colorize(gameId, 'yellow')} created for room ${colorize(room.id, 'yellow')}`, 'cyan')
+      );
+    }
   }
 
   private handleAddShips(client: WSClient, event: AddShipsEvent) {

@@ -9,7 +9,6 @@ export class ConnectionManager {
     const client: WSClient = {
       id: randomUUID(),
       socket,
-      rooms: new Set(),
     };
     this.clients.set(client.id, client);
     return client;
@@ -21,6 +20,15 @@ export class ConnectionManager {
 
   getClient(id: string) {
     return this.clients.get(id);
+  }
+
+  getClientByPlayerId(playerId: string): WSClient | undefined {
+    for (const client of this.clients.values()) {
+      if (client.playerId === playerId) {
+        return client;
+      }
+    }
+    return undefined;
   }
 
   broadcastToRoom(roomId: string, data: any) {
