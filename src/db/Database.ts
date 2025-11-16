@@ -1,5 +1,9 @@
 import { Ships } from 'types/ws-events.js';
 
+export interface ShipsState extends Ships {
+  hit: { x: number; y: number }[];
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -16,7 +20,7 @@ export interface Room {
 export interface Game {
   id: string;
   playerIds: string[];
-  ships: Map<string, Ships[]>;
+  ships: Map<string, ShipsState[]>;
   currentPlayer: string;
   status: 'waiting' | 'active' | 'finished';
 }
@@ -82,14 +86,32 @@ export class Database {
     return game;
   }
 
+  changeCurentPlayer(gameId: string, playerId: string): void {
+    const game = this.games.get(gameId);
+    if (game) {
+      game.currentPlayer = playerId;
+    }
+  }
+
   getGame(id: string): Game | undefined {
     return this.games.get(id);
   }
 
   addShipsToGame(gameId: string, playerId: string, ships: Ships[]): void {
+    const shipWhihtHit: ShipsState[] = ships.map((ship) => ({ ...ship, hit: [] }));
     const game = this.games.get(gameId);
     if (game) {
-      game.ships.set(playerId, ships);
+      game.ships.set(playerId, shipWhihtHit);
+    }
+  }
+
+  addHitToShip(gameId: string, playerId: string, shipPosition: number, hit: { x: number; y: number }): void {
+    const game = this.games.get(gameId);
+    if (game) {
+      const ship = game.ships.get(playerId)?.[shipPosition];
+      if (ship?.hit && !ship.hit.some((h) => h.x === hit.x && h.y === hit.y)) {
+        ship.hit.push(hit);
+      }
     }
   }
 

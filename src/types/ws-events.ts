@@ -3,6 +3,8 @@ interface BaseEvent {
   id: 0;
 }
 
+export type Status = 'miss' | 'killed' | 'shot';
+
 export interface Ships {
   position: { x: number; y: number };
   direction: boolean;
@@ -117,7 +119,7 @@ export interface AttackServerEvent extends BaseEvent {
   data: {
     position: { x: number; y: number };
     currentPlayer: number | string;
-    status: 'miss' | 'killed' | 'shot';
+    status: Status;
   };
 }
 

@@ -13,10 +13,13 @@ import {
   CreateGameEvent,
   StartGameEvent,
   TurnEvent,
+  AttackServerEvent,
+  Status,
+  Ships,
 } from '../types/ws-events.js';
 import { ConnectionManager } from './ConnectionManager.js';
 import { WSClient } from '../types/WSClient.js';
-import { Database, Game, Player, Room } from 'db/Database.js';
+import { Database, Game, Player } from 'db/Database.js';
 import { colorize } from 'utils/colors.js';
 
 export class Router {
@@ -103,6 +106,55 @@ export class Router {
       id: 0,
     };
     this.sendResponse(client, response);
+  }
+
+  sendAttackFeedback(client: WSClient, position: { x: number; y: number }, status: Status) {
+    const currentPlayer = client.playerId || '';
+    const response: AttackServerEvent = {
+      type: 'attack',
+      data: {
+        currentPlayer,
+        position,
+        status,
+      },
+      id: 0,
+    };
+    this.sendResponse(client, response);
+  }
+
+  private findHitShip(ship: Ships, x: number, y: number) {
+    const { position, direction, length } = ship;
+    if (direction) {
+      return position.x === x && y >= position.y && y < position.y + length;
+    } else {
+      return position.y === y && x >= position.x && x < position.x + length;
+    }
+  }
+
+  private processAttack(client: WSClient, gameId: string, indexPlayer: string, attackX: number, attackY: number) {
+    const game = this.db.getGame(gameId);
+    const opponentId = game?.playerIds.find((id) => id !== indexPlayer);
+    const ships = game?.ships.get(opponentId!) || [];
+    let status: Status = 'miss';
+    let hitShip = false;
+
+    ships.forEach((ship, index) => {
+      hitShip = this.findHitShip(ship, attackX, attackY);
+      if (hitShip) {
+        this.db.addHitToShip(gameId, opponentId!, index, { x: attackX, y: attackY });
+        status = ship.hit!.length === ship.length ? 'killed' : 'shot';
+      }
+    });
+
+    console.log(colorize(`Hit the x:${attackX},y:${attackY} of the ${status}`, 'green'));
+    this.sendAttackFeedback(client, { x: attackX, y: attackY }, status);
+    this.db.changeCurentPlayer(gameId, opponentId!);
+    this.db.getGame(gameId)!.playerIds.forEach((playerId) => {
+      const playerClient = this.connections.getClientByPlayerId(playerId);
+      if (playerClient) {
+        this.sendTurn(playerClient, this.db.getGame(gameId)!);
+      }
+    });
   }
 
   handle(client: WSClient, event: ClientEvent) {
@@ -223,20 +275,21 @@ export class Router {
         const playerClient = this.connections.getClientByPlayerId(playerId);
         if (playerClient) {
           this.sendStartGame(playerClient, game);
+          this.sendTurn(playerClient, game);
         }
       });
-      this.sendTurn(client, game);
     }
   }
 
   private handleAttack(client: WSClient, event: AttackEvent) {
     const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-    const game = this.db.getGame(data.gameId);
-
-
+    this.processAttack(client, data.gameId, data.indexPlayer, data.x, data.y);
   }
 
   private handleRandomAttack(client: WSClient, event: RandomAttackEvent) {
-    // Handle random attack
+    const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    const attackX = Math.floor(Math.random() * 10);
+    const attackY = Math.floor(Math.random() * 10);
+    this.processAttack(client, data.gameId, data.indexPlayer, attackX, attackY);
   }
 }
