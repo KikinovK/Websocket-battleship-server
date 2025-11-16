@@ -1,12 +1,19 @@
-interface Player {
+export interface Player {
   id: string;
   name: string;
   password: string;
   wins: number;
 }
 
+export interface Room {
+  id: string;
+  playerIds: string[];
+  gameId?: string;
+}
+
 export class Database {
   private players = new Map<string, Player>();
+  private rooms = new Map<string, Room>();
 
   // Players
   addPlayer(id: string, name: string, password: string): Player {
@@ -21,5 +28,29 @@ export class Database {
 
   getPlayerByName(name: string): Player | undefined {
     return Array.from(this.players.values()).find((p) => p.name === name);
+  }
+
+  // Rooms
+  createRoom(id: string): Room {
+    const room: Room = { id, playerIds: [] };
+    this.rooms.set(id, room);
+    return room;
+  }
+
+  addPlayerToRoom(roomId: string, playerId: string): Room | undefined {
+    const room = this.rooms.get(roomId);
+    if (room && room.playerIds.length < 2) {
+      room.playerIds.push(playerId);
+      return room;
+    }
+    return undefined;
+  }
+
+  getAllRooms(): Room[] {
+    return Array.from(this.rooms.values());
+  }
+
+  removeRoom(id: string): void {
+    this.rooms.delete(id);
   }
 }
