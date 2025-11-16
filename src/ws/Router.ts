@@ -17,6 +17,7 @@ import {
   Status,
   Ships,
   FinishEvent,
+  UpdateWinnersEvent,
 } from '../types/ws-events.js';
 import { ConnectionManager } from './ConnectionManager.js';
 import { WSClient } from '../types/WSClient.js';
@@ -143,6 +144,21 @@ export class Router {
     this.sendResponse(client, response);
   }
 
+  private sendUpdateWinners() {
+    const players = this.db.getAllPlayer();
+    const response: UpdateWinnersEvent = {
+      type: 'update_winners',
+      data: players.sort((a, b) => b.wins - a.wins).map((p) => ({ name: p.name, wins: p.wins })),
+      id: 0,
+    };
+    players.forEach((player) => {
+      const client = this.connections.getClientByPlayerId(player.id);
+      if (client) {
+        this.sendResponse(client, response);
+      }
+    });
+  }
+
   private processAttack(client: WSClient, gameId: string, indexPlayer: string, attackX: number, attackY: number) {
     const game = this.db.getGame(gameId);
     const { playerIds } = game || { playerIds: [] };
@@ -181,6 +197,9 @@ export class Router {
       console.log(
         colorize(`Win player ${colorize(this.db.getPlayer(client.playerId!)?.name || 'Unknown', 'yellow')}`, 'cyan')
       );
+
+      this.db.addPlayerWin(client.playerId!);
+      this.sendUpdateWinners();
     }
   }
 

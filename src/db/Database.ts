@@ -45,6 +45,23 @@ export class Database {
     return Array.from(this.players.values()).find((p) => p.name === name);
   }
 
+  addPlayerWin(id: string) {
+    const player = this.getPlayer(id);
+    if (player) {
+      player.wins++;
+    }
+  }
+
+  getWinners(): { name: string; wins: number }[] {
+    return Array.from(this.players.values())
+      .sort((a, b) => b.wins - a.wins)
+      .map((p) => ({ name: p.name, wins: p.wins }));
+  }
+
+  getAllPlayer(): Player[] {
+    return Array.from(this.players.values());
+  }
+
   // Rooms
   createRoom(id: string): Room {
     const room: Room = { id, playerIds: [] };
