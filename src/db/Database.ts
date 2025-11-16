@@ -115,6 +115,19 @@ export class Database {
     }
   }
 
+  isPlayerDefeated(gameId: string, playerId: string): boolean {
+    const game = this.games.get(gameId);
+    if (!game) return false;
+
+    const ships = game.ships.get(playerId);
+    if (!ships) return false;
+
+    const totalHits = ships.reduce((sum, ship) => sum + ship.hit.length, 0);
+    const totalLength = ships.reduce((sum, ship) => sum + ship.length, 0);
+
+    return totalHits === totalLength;
+  }
+
   removeGame(id: string): void {
     this.games.delete(id);
   }

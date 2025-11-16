@@ -16,6 +16,7 @@ import {
   AttackServerEvent,
   Status,
   Ships,
+  FinishEvent,
 } from '../types/ws-events.js';
 import { ConnectionManager } from './ConnectionManager.js';
 import { WSClient } from '../types/WSClient.js';
@@ -131,9 +132,21 @@ export class Router {
     }
   }
 
+  private sendFinishGame(client: WSClient, game: Game) {
+    const response: FinishEvent = {
+      type: 'finish',
+      data: {
+        winPlayer: game.currentPlayer,
+      },
+      id: 0,
+    };
+    this.sendResponse(client, response);
+  }
+
   private processAttack(client: WSClient, gameId: string, indexPlayer: string, attackX: number, attackY: number) {
     const game = this.db.getGame(gameId);
-    const opponentId = game?.playerIds.find((id) => id !== indexPlayer);
+    const { playerIds } = game || { playerIds: [] };
+    const opponentId = playerIds.find((id) => id !== indexPlayer);
     const ships = game?.ships.get(opponentId!) || [];
     let status: Status = 'miss';
     let hitShip = false;
@@ -149,12 +162,26 @@ export class Router {
     console.log(colorize(`Hit the x:${attackX},y:${attackY} of the ${status}`, 'green'));
     this.sendAttackFeedback(client, { x: attackX, y: attackY }, status);
     this.db.changeCurentPlayer(gameId, opponentId!);
-    this.db.getGame(gameId)!.playerIds.forEach((playerId) => {
+    playerIds.forEach((playerId) => {
       const playerClient = this.connections.getClientByPlayerId(playerId);
       if (playerClient) {
         this.sendTurn(playerClient, this.db.getGame(gameId)!);
       }
     });
+
+    if (this.db.isPlayerDefeated(gameId, opponentId!)) {
+      playerIds.forEach((playerId) => {
+        const playerClient = this.connections.getClientByPlayerId(playerId);
+        if (playerClient) {
+          this.sendFinishGame(playerClient, this.db.getGame(gameId)!);
+        }
+      });
+      this.db.removeGame(gameId);
+      console.log(colorize(`Game ${colorize(gameId, 'yellow')} is finished`, 'cyan'));
+      console.log(
+        colorize(`Win player ${colorize(this.db.getPlayer(client.playerId!)?.name || 'Unknown', 'yellow')}`, 'cyan')
+      );
+    }
   }
 
   handle(client: WSClient, event: ClientEvent) {
