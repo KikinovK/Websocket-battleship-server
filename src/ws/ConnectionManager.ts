@@ -30,14 +30,4 @@ export class ConnectionManager {
     }
     return undefined;
   }
-
-  broadcastToRoom(roomId: string, data: any) {
-    const json = JSON.stringify(data);
-
-    for (const client of this.clients.values()) {
-      if (client.rooms.has(roomId)) {
-        client.socket.send(json);
-      }
-    }
-  }
 }

@@ -1,3 +1,5 @@
+import { Ships } from 'types/ws-events.js';
+
 export interface Player {
   id: string;
   name: string;
@@ -11,9 +13,18 @@ export interface Room {
   gameId?: string;
 }
 
+export interface Game {
+  id: string;
+  playerIds: string[];
+  ships: Map<string, Ships[]>;
+  currentPlayer: string;
+  status: 'waiting' | 'active' | 'finished';
+}
+
 export class Database {
   private players = new Map<string, Player>();
   private rooms = new Map<string, Room>();
+  private games = new Map<string, Game>();
 
   // Players
   addPlayer(id: string, name: string, password: string): Player {
@@ -46,11 +57,43 @@ export class Database {
     return undefined;
   }
 
+  getRoom(id: string): Room | undefined {
+    return this.rooms.get(id);
+  }
+
   getAllRooms(): Room[] {
     return Array.from(this.rooms.values());
   }
 
   removeRoom(id: string): void {
     this.rooms.delete(id);
+  }
+
+  // Games
+  createGame(id: string, playerIds: string[]): Game {
+    const game: Game = {
+      id,
+      playerIds,
+      ships: new Map(),
+      currentPlayer: playerIds[0] || '',
+      status: 'waiting',
+    };
+    this.games.set(id, game);
+    return game;
+  }
+
+  getGame(id: string): Game | undefined {
+    return this.games.get(id);
+  }
+
+  addShipsToGame(gameId: string, playerId: string, ships: Ships[]): void {
+    const game = this.games.get(gameId);
+    if (game) {
+      game.ships.set(playerId, ships);
+    }
+  }
+
+  removeGame(id: string): void {
+    this.games.delete(id);
   }
 }

@@ -22,7 +22,7 @@ export class WSServer {
       console.log(colorize('Client connected ', 'green'), colorize(client.id, 'yellow'));
 
       ws.on('message', (raw) => {
-        console.log(colorize('Message received', 'green'));
+        console.log(colorize(`Message received ${client.playerId || ''}`, 'green'));
         console.log(colorize(raw.toString(), 'blue'));
 
         this.handler.onMessage(client, raw);

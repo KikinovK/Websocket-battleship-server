@@ -11,10 +11,12 @@ import {
   ServerEvent,
   UpdateRoomEvent,
   CreateGameEvent,
+  StartGameEvent,
+  TurnEvent,
 } from '../types/ws-events.js';
 import { ConnectionManager } from './ConnectionManager.js';
 import { WSClient } from '../types/WSClient.js';
-import { Database, Player, Room } from 'db/Database.js';
+import { Database, Game, Player, Room } from 'db/Database.js';
 import { colorize } from 'utils/colors.js';
 
 export class Router {
@@ -80,6 +82,29 @@ export class Router {
     this.sendResponse(client, response);
   }
 
+  private sendStartGame(client: WSClient, game: Game) {
+    const response: StartGameEvent = {
+      type: 'start_game',
+      data: {
+        ships: game.ships.get(client.playerId!) || [],
+        currentPlayerIndex: client.playerId!,
+      },
+      id: 0,
+    };
+    this.sendResponse(client, response);
+  }
+
+  private sendTurn(client: WSClient, game: Game) {
+    const response: TurnEvent = {
+      type: 'turn',
+      data: {
+        currentPlayer: game.currentPlayer,
+      },
+      id: 0,
+    };
+    this.sendResponse(client, response);
+  }
+
   handle(client: WSClient, event: ClientEvent) {
     switch (event.type) {
       case 'reg':
@@ -136,6 +161,16 @@ export class Router {
   private handleAddUserToRoom(client: WSClient, event: AddUserToRoomEvent) {
     const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
 
+    if (this.db.getRoom(data.indexRoom)?.playerIds.includes(client.playerId!)) {
+      console.log(
+        colorize(
+          `Player ${colorize(this.db.getPlayer(client.playerId!)?.name || 'Unknown', 'yellow')} is already in room ${colorize(data.indexRoom, 'yellow')}`,
+          'red'
+        )
+      );
+      return;
+    }
+
     const room = this.db.addPlayerToRoom(data.indexRoom, client.playerId!);
     if (!room) {
       console.log(colorize(`Failed to add player to room ${colorize(data.indexRoom, 'yellow')}`, 'red'));
@@ -160,6 +195,8 @@ export class Router {
           this.sendCreateGame(playerClient, gameId, playerId);
         }
       });
+      this.db.createGame(gameId, room.playerIds);
+
       console.log(
         colorize(`Game ${colorize(gameId, 'yellow')} created for room ${colorize(room.id, 'yellow')}`, 'cyan')
       );
@@ -167,11 +204,36 @@ export class Router {
   }
 
   private handleAddShips(client: WSClient, event: AddShipsEvent) {
-    // Handle add ships
+    const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    const gameId = data.gameId;
+    this.db.addShipsToGame(gameId, client.playerId!, data.ships);
+
+    console.log(
+      colorize(
+        `Player ${colorize(this.db.getPlayer(client.playerId!)?.name || 'Unknown', 'yellow')} added ships`,
+        'cyan'
+      )
+    );
+
+    const game = this.db.getGame(gameId);
+
+    if (game?.ships.size === 2) {
+      console.log(colorize(`Game ${colorize(gameId, 'yellow')} ready to start`, 'cyan'));
+      game.playerIds.forEach((playerId) => {
+        const playerClient = this.connections.getClientByPlayerId(playerId);
+        if (playerClient) {
+          this.sendStartGame(playerClient, game);
+        }
+      });
+      this.sendTurn(client, game);
+    }
   }
 
   private handleAttack(client: WSClient, event: AttackEvent) {
-    // Handle attack
+    const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    const game = this.db.getGame(data.gameId);
+
+
   }
 
   private handleRandomAttack(client: WSClient, event: RandomAttackEvent) {

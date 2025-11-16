@@ -3,6 +3,13 @@ interface BaseEvent {
   id: 0;
 }
 
+export interface Ships {
+  position: { x: number; y: number };
+  direction: boolean;
+  length: number;
+  type: 'small' | 'medium' | 'large' | 'huge';
+}
+
 // Client Events
 export interface RegClientEvent extends BaseEvent {
   type: 'reg';
@@ -28,12 +35,7 @@ export interface AddShipsEvent extends BaseEvent {
   type: 'add_ships';
   data: {
     gameId: number | string;
-    ships: {
-      position: { x: number; y: number };
-      direction: boolean;
-      length: number;
-      type: 'small' | 'medium' | 'large' | 'huge';
-    }[];
+    ships: Ships[];
     indexPlayer: number | string;
   };
 }
@@ -105,12 +107,7 @@ export interface UpdateRoomEvent extends BaseEvent {
 export interface StartGameEvent extends BaseEvent {
   type: 'start_game';
   data: {
-    ships: {
-      position: { x: number; y: number };
-      direction: boolean;
-      length: number;
-      type: 'small' | 'medium' | 'large' | 'huge';
-    }[];
+    ships: Ships[];
     currentPlayerIndex: number | string;
   };
 }
